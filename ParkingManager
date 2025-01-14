@@ -1,0 +1,68 @@
+package com.example.parking_management_system_;
+
+import java.time.format.DateTimeFormatter;
+import javafx.scene.control.Alert;
+
+public class ParkingManager {
+    private final ParkingController parkingSystem;
+    private static final int MAX_LEVEL = 2;
+    private static final int MAX_SPACE = 4;
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String FILE_PATH = System.getProperty("user.dir") + "/parking_records.txt";
+
+    // Constructor: Initializes the ParkingManager with a ParkingController instance
+    public ParkingManager(ParkingController parkingSystem) {
+        this.parkingSystem = parkingSystem;
+    }
+
+    // Parks a vehicle at the specified level and space if available
+    public boolean parkVehicle(int level, int spaceNumber, FileHandler.Vehicle vehicle) {
+        validateSpaceLocation(level, spaceNumber);
+
+        ParkingController.ParkingSpace space = parkingSystem.getSpace(level, spaceNumber);
+        if (space != null && !space.isOccupied()) {
+            space.occupySpace();
+            // Save vehicle entry to file
+            FileHandler.saveVehicleEntry(
+                    vehicle.getVehicleType(),
+                    level,
+                    spaceNumber,
+                    space.getParkingStartTime()
+            );
+            return true;
+        }
+        return false;
+    }
+
+    // Checks out a vehicle from the specified level and space
+    // Returns the duration of parking if successful, or -1 if the space is unoccupied
+    public long checkOutVehicle(int level, int spaceNumber) {
+        validateSpaceLocation(level, spaceNumber);
+
+        ParkingController.ParkingSpace space = parkingSystem.getSpace(level, spaceNumber);
+        if (space != null && space.isOccupied()) {
+            long duration = space.vacateSpace();
+            // Update vehicle exit in file
+            FileHandler.updateVehicleExit(level, spaceNumber);
+            return duration;
+        }
+        return -1;
+    }
+
+    // Validates whether the specified level and space number are within valid ranges
+    private void validateSpaceLocation(int level, int spaceNumber) {
+        if (level < 0 || level > MAX_LEVEL || spaceNumber < 0 || spaceNumber > MAX_SPACE) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid space! Please enter Level (0-%d) and Space (0-%d).",
+                            MAX_LEVEL, MAX_SPACE)
+            );
+        }
+    }
+
+    // Displays an error message using a dialog box
+    public void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setContentText(message);
+        alert.show();
+    }
+}
